@@ -110,7 +110,7 @@ def run_experiment(option, cc_scheme, link_loss=0):
     info('*** Starting iperf3 client(s) with congestion control scheme: %s\n' % cc_scheme)
     if option == 'a':
         # Part (a): Run client on H1 for 150 seconds
-        h1.cmd(f'iperf3 -c {h7.IP()} -p 5000 -b 10M -P 10 -t 150 -C {cc_scheme} --logfile temp.txt')
+        h1.cmd(f'iperf3 -c {h7.IP()} -p 5000 -b 10M -P 10 -t 150 -C {cc_scheme} > temp.txt')
 
     elif option == 'b':
         # Part (b): Staggered clients: H1 at T=0, H3 at T=15, H4 at T=30
