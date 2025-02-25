@@ -33,9 +33,16 @@ class CustomTopo(Topo):
 
 topos = { 'mytopo': ( lambda: CustomTopo() ) }
 
-"""
-h7 iperf3 -s -D
-h1 iperf3 -c 10.0.0.1 -p 5001 -b 10M -P 10 -t 150 -C cubic
-h1 iperf3 -c 10.0.0.1 -p 5001 -b 10M -P 10 -t 150 -C scalable
-h1 iperf3 -c 10.0.0.1 -p 5001 -b 10M -P 10 -t 150 -C westwood
-"""
+if __name__ == '__main__':
+    from mininet.net import Mininet
+    from mininet.node import Controller, OVSKernelSwitch
+    from mininet.cli import CLI
+    from mininet.log import setLogLevel
+
+    setLogLevel('info')
+
+    net = Mininet(topo=CustomTopo(), controller=Controller, switch=OVSKernelSwitch)
+    
+    net.start()
+    CLI(net)
+    net.stop()
