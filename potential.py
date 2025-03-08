@@ -46,19 +46,8 @@ class CustomTopo(Topo):
                           - "s2s4": For experiment c1. Use S1-S2 and a direct S2-S4 link.
                           - "s1s4": For experiment c2. Use S1-S2, S1-S3 and a direct S1-S4 link.
         :param link_loss: Packet loss percentage applied on the bottleneck link.
-        :param bandwidths: Dictionary specifying link bandwidths. If None, all links default to 100 Mbps.
+        :param bandwidths: Dictionary specifying link bandwidths. If None, no bandwidth is set.
         """
-        # Set default bandwidths for all links as 100 Mbps if not provided
-        if bandwidths is None:
-            if topo_type == "default":
-                bandwidths = {'s1-s2': 100, 's2-s3': 100, 's3-s4': 100}
-            elif topo_type == "s2s4":
-                bandwidths = {'s1-s2': 100, 's2-s4': 100}
-            elif topo_type == "s1s4":
-                bandwidths = {'s1-s2': 100, 's1-s3': 100, 's1-s4': 100}
-            else:
-                bandwidths = {}
-
         # Create switches
         s1 = self.addSwitch('s1')
         s2 = self.addSwitch('s2')
@@ -83,23 +72,15 @@ class CustomTopo(Topo):
         self.addLink(h6, s4)
         self.addLink(h7, s4)
 
-        # Build inter-switch links based on the topology type
-        if topo_type == "default":
-            self.addLink(s1, s2, bw=bandwidths.get('s1-s2', 100))
-            self.addLink(s2, s3, bw=bandwidths.get('s2-s3', 100), loss=link_loss)
-            self.addLink(s3, s4, bw=bandwidths.get('s3-s4', 100))
-        elif topo_type == "s2s4":
-            self.addLink(s1, s2, bw=bandwidths.get('s1-s2', 100))
-            self.addLink(s2, s4, bw=bandwidths.get('s2-s4', 100), loss=link_loss)
-        elif topo_type == "s1s4":
-            self.addLink(s1, s2, bw=bandwidths.get('s1-s2', 100))
-            self.addLink(s1, s3, bw=bandwidths.get('s1-s3', 100))
-            self.addLink(s1, s4, bw=bandwidths.get('s1-s4', 100), loss=link_loss)
+        if topo_type == "s2s3":
+            self.addLink(s1, s2, bw=bandwidths.get('s1-s2', None))
+            self.addLink(s2, s3, bw=bandwidths.get('s2-s3', None), loss=link_loss)
+            self.addLink(s3, s4, bw=bandwidths.get('s3-s4', None))
         else:
             # Fallback to default topology if topo_type is unrecognized.
-            self.addLink(s1, s2, bw=bandwidths.get('s1-s2', 100))
-            self.addLink(s2, s3, bw=bandwidths.get('s2-s3', 100), loss=link_loss)
-            self.addLink(s3, s4, bw=bandwidths.get('s3-s4', 100))
+            self.addLink(s1, s2)
+            self.addLink(s2, s3, loss=link_loss)
+            self.addLink(s3, s4)
 
 def run_experiment(option, cc_scheme, link_loss=0):
     """
@@ -113,17 +94,14 @@ def run_experiment(option, cc_scheme, link_loss=0):
     setLogLevel('info')
 
     # Determine the topology type and bandwidth configuration (all set to 100 Mbps by default)
-    if option in ['a', 'b']:
+    if option in ['c1', 'c2a', 'c2b', 'c2c']:
+        topo_type = "s2s3"
+        bw = {'s1-s2': 100, 's2-s3': 50, 's3-s4': 100}
+    elif option in ['a', 'b']:
         topo_type = "default"
-        bw = {'s1-s2': 100, 's2-s3': 100, 's3-s4': 100}
-    elif option == 'c1':
-        topo_type = "s2s4"
-        bw = {'s1-s2': 100, 's2-s4': 100}
-    elif option in ['c2a', 'c2b', 'c2c']:
-        topo_type = "s1s4"
-        bw = {'s1-s2': 100, 's1-s3': 100, 's1-s4': 100}
+        bw = None
     else:
-        info('*** Invalid experiment option. Please use one of: a, b, c1, c2a, c2b, or c2c\n')
+        info('*** Invalid experiment option. Please use one of: c1, c2a, c2b, or c2c\n')
         sys.exit(1)
 
     # Create network with custom topology
@@ -142,7 +120,8 @@ def run_experiment(option, cc_scheme, link_loss=0):
     # Start the iperf3 server on H7 (running in the background)
     info('*** Starting iperf3 server on H7\n')
     h7.cmd('iperf3 -s -p 5000 -D')
-    time.sleep(2)
+    
+    input('Press Enter to start the experiment...')
 
     info('*** Starting iperf3 client(s) with congestion control scheme: %s\n' % cc_scheme)
     if option == 'a':
@@ -176,16 +155,16 @@ def run_experiment(option, cc_scheme, link_loss=0):
         net.stop()
         sys.exit(1)
 
-    info('*** Running CLI (type "exit" to terminate the experiment)...\n')
+    info('*** Running CLI (type "exit" or press <Ctrl-D> to terminate the experiment)...\n')
     CLI(net)
     net.stop()
 
 if __name__ == '__main__':
     if len(sys.argv) < 3:
         print("Usage: sudo python3 script.py <option> <cc_scheme> [loss]")
-        print("  <option>: a, b, c1, c2a, c2b, or c2c")
+        print("  <option>: a, b, c1, c2a, c2b, or c2c [Note: d part can be run using c1, c2a, c2b, or c2c with loss value]")
         print("  <cc_scheme>: TCP congestion control scheme (e.g., reno, cubic, bbr)")
-        print("  [loss]: Optional. Packet loss percentage for the bottleneck link (default 0)")
+        print("  [loss]: Optional. Packet loss percentage for the bottleneck link (s2-s3) (default 0)")
         sys.exit(1)
 
     exp_option = sys.argv[1]

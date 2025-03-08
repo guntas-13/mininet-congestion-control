@@ -3,7 +3,7 @@ from mininet.net import Mininet
 from mininet.topo import Topo
 from mininet.node import Controller, OVSKernelSwitch
 from mininet.link import TCLink
-from mininet.cli import CLI
+# from mininet.cli import CLI
 from mininet.log import setLogLevel, info
 import time
 
