@@ -3,27 +3,29 @@
 """
 Mininet TCP Congestion Control Experiment Script
 
-This script sets up a Mininet topology with 7 hosts (H1-H7) connected via 4 switches (S1-S4).
-H7 runs an iperf3 TCP server and the other hosts are used as iperf3 TCP clients.
-Traffic is generated using:
-    iperf3 -c <server_ip> -p <server_port> -b 10M -P 10 -t <duration> -C <cc_scheme>
+This script sets up a Mininet topology with 7 hosts (H1–H7) connected via 4 switches (S1–S4)
+and runs iperf3-based TCP experiments using different TCP congestion control schemes.
 
 Experiments:
-    a. Single client on H1.
-    b. Staggered clients: H1 at T=0s (150s), H3 at T=15s (120s), H4 at T=30s (90s).
-    c. Bandwidth-controlled experiments:
-         c1. Only client H3.
-         c2a. Clients H1 and H2.
-         c2b. Clients H1 and H3.
-         c2c. Clients H1, H3, and H4.
-    d. Optionally, set link loss on the link S2-S3 (e.g., 1% or 5%) and repeat experiment (c).
+    a. Default topology:
+         - Run client on H1 for 150s and server on H7.
+         - Measure throughput over time, goodput, packet loss rate, and maximum window size.
+    b. Default topology with staggered clients:
+         - H1 starts at T=0s (runs for 150s), H3 at T=15s (120s), H4 at T=30s (90s) with server on H7.
+    c. Topology changes:
+         1. Option c1 (“s2s4”): Activate a direct link between S2 and S4 (bw=100 Mbps) and run the client on H3.
+         2. Options c2a, c2b, c2c (“s1s4”): Activate a direct link between S1 and S4 (bw=100 Mbps) while ensuring hosts on S2 and S3 can reach S1.
+              - c2a: Clients on H1 and H2.
+              - c2b: Clients on H1 and H3.
+              - c2c: Clients on H1, H3, and H4.
+    d. For any experiment above, an optional loss value (e.g., 1% or 5%) may be specified for the bottleneck link.
 
 Usage:
     sudo python3 script.py <option> <cc_scheme> [loss]
 
     <option>: a, b, c1, c2a, c2b, or c2c
     <cc_scheme>: TCP congestion control scheme (e.g., reno, cubic, bbr)
-    [loss]: Optional. Packet loss percentage for link S2-S3 (default 0)
+    [loss]: Optional. Packet loss percentage for the bottleneck link (default 0)
 """
 
 import sys
@@ -35,16 +37,27 @@ from mininet.cli import CLI
 from mininet.log import setLogLevel, info
 
 class CustomTopo(Topo):
-    def build(self, link_loss=0, bandwidths=None):
+    def build(self, topo_type="default", link_loss=0, bandwidths=None):
         """
-        Builds the topology.
-        :param link_loss: Packet loss percentage for the link between S2 and S3.
-        :param bandwidths: Dictionary defining bandwidth for switch links.
-                           Expected keys: 's1-s2', 's2-s3', 's3-s4'
+        Builds the topology based on the experiment type.
+        
+        :param topo_type: Type of topology. Options:
+                          - "default": Use links S1-S2, S2-S3, and S3-S4.
+                          - "s2s4": For experiment c1. Use S1-S2 and a direct S2-S4 link.
+                          - "s1s4": For experiment c2. Use S1-S2, S1-S3 and a direct S1-S4 link.
+        :param link_loss: Packet loss percentage applied on the bottleneck link.
+        :param bandwidths: Dictionary specifying link bandwidths. If None, all links default to 100 Mbps.
         """
+        # Set default bandwidths for all links as 100 Mbps if not provided
         if bandwidths is None:
-            # Default bandwidths (in Mbps) as specified in part (c)
-            bandwidths = {'s1-s2': 100, 's2-s3': 50, 's3-s4': 100}
+            if topo_type == "default":
+                bandwidths = {'s1-s2': 100, 's2-s3': 100, 's3-s4': 100}
+            elif topo_type == "s2s4":
+                bandwidths = {'s1-s2': 100, 's2-s4': 100}
+            elif topo_type == "s1s4":
+                bandwidths = {'s1-s2': 100, 's1-s3': 100, 's1-s4': 100}
+            else:
+                bandwidths = {}
 
         # Create switches
         s1 = self.addSwitch('s1')
@@ -61,7 +74,7 @@ class CustomTopo(Topo):
         h6 = self.addHost('h6')
         h7 = self.addHost('h7')
 
-        # Connect hosts to switches
+        # Connect hosts to switches:
         self.addLink(h1, s1)
         self.addLink(h2, s1)
         self.addLink(h3, s2)
@@ -70,97 +83,113 @@ class CustomTopo(Topo):
         self.addLink(h6, s4)
         self.addLink(h7, s4)
 
-        # Connect switches with given bandwidth and loss settings
-        self.addLink(s1, s2, bw=bandwidths['s1-s2'])
-        self.addLink(s2, s3, bw=bandwidths['s2-s3'], loss=link_loss)
-        self.addLink(s3, s4, bw=bandwidths['s3-s4'])
+        # Build inter-switch links based on the topology type
+        if topo_type == "default":
+            self.addLink(s1, s2, bw=bandwidths.get('s1-s2', 100))
+            self.addLink(s2, s3, bw=bandwidths.get('s2-s3', 100), loss=link_loss)
+            self.addLink(s3, s4, bw=bandwidths.get('s3-s4', 100))
+        elif topo_type == "s2s4":
+            self.addLink(s1, s2, bw=bandwidths.get('s1-s2', 100))
+            self.addLink(s2, s4, bw=bandwidths.get('s2-s4', 100), loss=link_loss)
+        elif topo_type == "s1s4":
+            self.addLink(s1, s2, bw=bandwidths.get('s1-s2', 100))
+            self.addLink(s1, s3, bw=bandwidths.get('s1-s3', 100))
+            self.addLink(s1, s4, bw=bandwidths.get('s1-s4', 100), loss=link_loss)
+        else:
+            # Fallback to default topology if topo_type is unrecognized.
+            self.addLink(s1, s2, bw=bandwidths.get('s1-s2', 100))
+            self.addLink(s2, s3, bw=bandwidths.get('s2-s3', 100), loss=link_loss)
+            self.addLink(s3, s4, bw=bandwidths.get('s3-s4', 100))
 
 def run_experiment(option, cc_scheme, link_loss=0):
     """
-    Sets up the network, starts the iperf3 server, and runs clients based on the selected experiment option.
-    :param option: Experiment option (a, b, c1, c2a, c2b, c2c)
+    Sets up the network, starts the iperf3 server, and runs the appropriate client(s)
+    based on the selected experiment option.
+    
+    :param option: Experiment option (a, b, c1, c2a, c2b, or c2c)
     :param cc_scheme: TCP congestion control scheme (e.g., reno, cubic, bbr)
-    :param link_loss: Packet loss percentage for link S2-S3.
+    :param link_loss: Packet loss percentage for the bottleneck link.
     """
     setLogLevel('info')
 
-    # Bandwidth configuration as specified for part (c)
-    bandwidths = {'s1-s2': 100, 's2-s3': 50, 's3-s4': 100}
+    # Determine the topology type and bandwidth configuration (all set to 100 Mbps by default)
+    if option in ['a', 'b']:
+        topo_type = "default"
+        bw = {'s1-s2': 100, 's2-s3': 100, 's3-s4': 100}
+    elif option == 'c1':
+        topo_type = "s2s4"
+        bw = {'s1-s2': 100, 's2-s4': 100}
+    elif option in ['c2a', 'c2b', 'c2c']:
+        topo_type = "s1s4"
+        bw = {'s1-s2': 100, 's1-s3': 100, 's1-s4': 100}
+    else:
+        info('*** Invalid experiment option. Please use one of: a, b, c1, c2a, c2b, or c2c\n')
+        sys.exit(1)
 
-    # Create network with custom topology, applying loss if provided
-    net = Mininet(topo=CustomTopo(link_loss=link_loss, bandwidths=bandwidths),
+    # Create network with custom topology
+    net = Mininet(topo=CustomTopo(topo_type=topo_type, link_loss=link_loss, bandwidths=bw),
                   controller=Controller,
                   switch=OVSKernelSwitch,
                   autoSetMacs=True)
     info('*** Starting network\n')
     net.start()
-    # Populate ARP tables and verify connectivity
     net.staticArp()
     net.pingAll()
 
     # Get hosts
     h1, h2, h3, h4, h5, h6, h7 = net.get('h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'h7')
 
-    # Start the iperf3 server on H7 (running in background)
+    # Start the iperf3 server on H7 (running in the background)
     info('*** Starting iperf3 server on H7\n')
-    # h7.cmd('ifconfig > iperf3_server.txt')
     h7.cmd('iperf3 -s -p 5000 -D')
     time.sleep(2)
 
     info('*** Starting iperf3 client(s) with congestion control scheme: %s\n' % cc_scheme)
     if option == 'a':
-        # Part (a): Run client on H1 for 150 seconds
+        # Run client on H1 for 150 seconds.
         h1.cmd(f'iperf3 -c {h7.IP()} -p 5000 -b 10M -P 10 -t 150 -C {cc_scheme} > temp.txt')
-
     elif option == 'b':
-        # Part (b): Staggered clients: H1 at T=0, H3 at T=15, H4 at T=30
+        # Staggered clients: H1 at T=0 (150s), H3 at T=15 (120s), H4 at T=30 (90s).
         h1.cmd(f'iperf3 -c {h7.IP()} -p 5000 -b 10M -P 10 -t 150 -C {cc_scheme} &')
         time.sleep(15)
         h3.cmd(f'iperf3 -c {h7.IP()} -p 5000 -b 10M -P 10 -t 120 -C {cc_scheme} &')
         time.sleep(15)
         h4.cmd(f'iperf3 -c {h7.IP()} -p 5000 -b 10M -P 10 -t 90 -C {cc_scheme} &')
-
     elif option == 'c1':
-        # Part (c) condition 1: Only client on H3
+        # Direct link (S2–S4): Run client on H3 for 150 seconds.
         h3.cmd(f'iperf3 -c {h7.IP()} -p 5000 -b 10M -P 10 -t 150 -C {cc_scheme}')
-
     elif option == 'c2a':
-        # Part (c) condition 2a: Clients on H1 and H2
-        h1.cmd(f'iperf3 -c {h7.IP()} -p 5000 -b 10M -P 10 -t 150 -C {cc_scheme}')
+        # Direct link (S1–S4): Run clients on H1 and H2 for 150 seconds.
+        h1.cmd(f'iperf3 -c {h7.IP()} -p 5000 -b 10M -P 10 -t 150 -C {cc_scheme} &')
         h2.cmd(f'iperf3 -c {h7.IP()} -p 5000 -b 10M -P 10 -t 150 -C {cc_scheme}')
-
     elif option == 'c2b':
-        # Part (c) condition 2b: Clients on H1 and H3
-        h1.cmd(f'iperf3 -c {h7.IP()} -p 5000 -b 10M -P 10 -t 150 -C {cc_scheme}')
+        # Direct link (S1–S4): Run clients on H1 and H3 for 150 seconds.
+        h1.cmd(f'iperf3 -c {h7.IP()} -p 5000 -b 10M -P 10 -t 150 -C {cc_scheme} &')
         h3.cmd(f'iperf3 -c {h7.IP()} -p 5000 -b 10M -P 10 -t 150 -C {cc_scheme}')
-
     elif option == 'c2c':
-        # Part (c) condition 2c: Clients on H1, H3, and H4
-        h1.cmd(f'iperf3 -c {h7.IP()} -p 5000 -b 10M -P 10 -t 150 -C {cc_scheme}')
-        h3.cmd(f'iperf3 -c {h7.IP()} -p 5000 -b 10M -P 10 -t 150 -C {cc_scheme}')
+        # Direct link (S1–S4): Run clients on H1, H3, and H4 for 150 seconds.
+        h1.cmd(f'iperf3 -c {h7.IP()} -p 5000 -b 10M -P 10 -t 150 -C {cc_scheme} &')
+        h3.cmd(f'iperf3 -c {h7.IP()} -p 5000 -b 10M -P 10 -t 150 -C {cc_scheme} &')
         h4.cmd(f'iperf3 -c {h7.IP()} -p 5000 -b 10M -P 10 -t 150 -C {cc_scheme}')
-
     else:
         info('*** Invalid experiment option. Please use one of: a, b, c1, c2a, c2b, or c2c\n')
         net.stop()
         sys.exit(1)
 
-    info('*** Running CLI (use exit to terminate the experiment)...\n')
+    info('*** Running CLI (type "exit" to terminate the experiment)...\n')
     CLI(net)
     net.stop()
 
 if __name__ == '__main__':
-    # Expect at least 3 arguments: <option> <cc_scheme> [loss]
     if len(sys.argv) < 3:
         print("Usage: sudo python3 script.py <option> <cc_scheme> [loss]")
         print("  <option>: a, b, c1, c2a, c2b, or c2c")
         print("  <cc_scheme>: TCP congestion control scheme (e.g., reno, cubic, bbr)")
-        print("  [loss]: Optional. Link loss percentage for link S2-S3 (default 0)")
+        print("  [loss]: Optional. Packet loss percentage for the bottleneck link (default 0)")
         sys.exit(1)
 
     exp_option = sys.argv[1]
     cc_scheme = sys.argv[2]
-    # Link loss percentage: if provided, convert to int; else default to 0
     loss = int(sys.argv[3]) if len(sys.argv) >= 4 else 0
 
     run_experiment(exp_option, cc_scheme, link_loss=loss)

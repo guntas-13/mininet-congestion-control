@@ -3,6 +3,7 @@ from mininet.net import Mininet
 from mininet.topo import Topo
 from mininet.node import Controller, OVSKernelSwitch
 from mininet.cli import CLI
+from mininet.link import TCLink
 from mininet.log import setLogLevel, info
 
 class CustomTopo(Topo):
@@ -32,14 +33,14 @@ class CustomTopo(Topo):
         self.addLink(h7, s4)
         self.addLink(s1, s2)
         self.addLink(s2, s3)
-        self.addLink(s3, s4)
+        self.addLink(s3, s4, bw=10)
 
 topos = { 'mytopo': ( lambda: CustomTopo() ) }
 
 if __name__ == '__main__':
-    setLogLevel('info') # set Mininet log level: debug, info, warning, error
+    setLogLevel('info')
 
-    net = Mininet(topo=CustomTopo(), controller=Controller, switch=OVSKernelSwitch)
+    net = Mininet(topo=CustomTopo(), controller=Controller, switch=OVSKernelSwitch, link=TCLink)
     
     net.start()
     info('*** Running CLI\n')
