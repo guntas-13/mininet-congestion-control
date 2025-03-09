@@ -4,6 +4,24 @@
     <img src = "./images/topo.png" style="width: 100%">
 </div>
 
+## TCP Cubic
+
+<div align = "center">
+    <img src = "./images/IO_b_cubic.png" style="width: 100%">
+</div>
+
+## TCP Westwood
+
+<div align = "center">
+    <img src = "./images/IO_b_westwood.png" style="width: 100%">
+</div>
+
+## TCP Scalable
+
+<div align = "center">
+    <img src = "./images/IO_b_scalable.png" style="width: 100%">
+</div>
+
 # Task-2 : Implementation and mitigation of SYN flood attack
 
 <div align = "center">
