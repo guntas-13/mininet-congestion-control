@@ -148,7 +148,7 @@ void syn_flood_raw(bool& stop_flag) {
             cerr << "Send failed: " << strerror(errno) << endl;
         }
 
-        this_thread::sleep_for(chrono::milliseconds(10)); // Control flood rate
+        this_thread::sleep_for(chrono::milliseconds(5)); // Control flood rate
     }
 
     close(sock);
