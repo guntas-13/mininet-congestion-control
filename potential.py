@@ -37,7 +37,7 @@ from mininet.cli import CLI
 from mininet.log import setLogLevel, info
 
 class CustomTopo(Topo):
-    def build(self, topo_type="default", link_loss=0, bandwidths=None):
+    def build(self, option, link_loss=0):
         """
         Builds the topology based on the experiment type.
         
@@ -72,14 +72,14 @@ class CustomTopo(Topo):
         self.addLink(h6, s4)
         self.addLink(h7, s4)
 
-        if topo_type == "s2s3":
-            self.addLink(s1, s2, bw=bandwidths.get('s1-s2', None))
-            self.addLink(s2, s3, bw=bandwidths.get('s2-s3', None), loss=link_loss)
-            self.addLink(s3, s4, bw=bandwidths.get('s3-s4', None))
+        if option in ['c1', 'c2a', 'c2b', 'c2c']:
+            self.addLink(s1, s2, bw=100)
+            self.addLink(s2, s3, bw=50, loss=link_loss)
+            self.addLink(s3, s4, bw=100)
         else:
             # Fallback to default topology if topo_type is unrecognized.
             self.addLink(s1, s2)
-            self.addLink(s2, s3, loss=link_loss)
+            self.addLink(s2, s3)
             self.addLink(s3, s4)
 
 def run_experiment(option, cc_scheme, link_loss=0):
@@ -94,21 +94,15 @@ def run_experiment(option, cc_scheme, link_loss=0):
     setLogLevel('info')
 
     # Determine the topology type and bandwidth configuration (all set to 100 Mbps by default)
-    if option in ['c1', 'c2a', 'c2b', 'c2c']:
-        topo_type = "s2s3"
-        bw = {'s1-s2': 100, 's2-s3': 50, 's3-s4': 100}
-    elif option in ['a', 'b']:
-        topo_type = "default"
-        bw = None
-    else:
+    
+    if option not in ['a', 'b', 'c1', 'c2a', 'c2b', 'c2c']:
         info('*** Invalid experiment option. Please use one of: c1, c2a, c2b, or c2c\n')
         sys.exit(1)
 
     # Create network with custom topology
-    net = Mininet(topo=CustomTopo(topo_type=topo_type, link_loss=link_loss, bandwidths=bw),
+    net = Mininet(topo=CustomTopo(option=option, link_loss=link_loss),
                   controller=Controller,
-                  switch=OVSKernelSwitch,
-                  autoSetMacs=True)
+                  switch=OVSKernelSwitch)
     info('*** Starting network\n')
     net.start()
     net.staticArp()
@@ -128,27 +122,29 @@ def run_experiment(option, cc_scheme, link_loss=0):
         # Run client on H1 for 150 seconds.
         h1.cmd(f'iperf3 -c {h7.IP()} -p 5000 -b 10M -P 10 -t 150 -C {cc_scheme} > temp.txt')
     elif option == 'b':
+        h7.cmd('iperf3 -s -p 5001 -D')
+        h7.cmd('iperf3 -s -p 5002 -D')
         # Staggered clients: H1 at T=0 (150s), H3 at T=15 (120s), H4 at T=30 (90s).
-        h1.cmd(f'iperf3 -c {h7.IP()} -p 5000 -b 10M -P 10 -t 150 -C {cc_scheme} &')
+        h1.cmd(f'iperf3 -c {h7.IP()} -p 5000 -b 10M -P 10 -t 150 -C {cc_scheme} > h1_b.txt &')
         time.sleep(15)
-        h3.cmd(f'iperf3 -c {h7.IP()} -p 5000 -b 10M -P 10 -t 120 -C {cc_scheme} &')
+        h3.cmd(f'iperf3 -c {h7.IP()} -p 5001 -b 10M -P 10 -t 120 -C {cc_scheme} > h3_b.txt &')
         time.sleep(15)
-        h4.cmd(f'iperf3 -c {h7.IP()} -p 5000 -b 10M -P 10 -t 90 -C {cc_scheme} &')
+        h4.cmd(f'iperf3 -c {h7.IP()} -p 5002 -b 10M -P 10 -t 90 -C {cc_scheme} > h4_b.txt &')
     elif option == 'c1':
         # Direct link (S2–S4): Run client on H3 for 150 seconds.
         h3.cmd(f'iperf3 -c {h7.IP()} -p 5000 -b 10M -P 10 -t 150 -C {cc_scheme}')
     elif option == 'c2a':
         # Direct link (S1–S4): Run clients on H1 and H2 for 150 seconds.
-        h1.cmd(f'iperf3 -c {h7.IP()} -p 5000 -b 10M -P 10 -t 150 -C {cc_scheme} &')
+        h1.cmd(f'iperf3 -c {h7.IP()} -p 5000 -b 10M -P 10 -t 150 -C {cc_scheme}')
         h2.cmd(f'iperf3 -c {h7.IP()} -p 5000 -b 10M -P 10 -t 150 -C {cc_scheme}')
     elif option == 'c2b':
         # Direct link (S1–S4): Run clients on H1 and H3 for 150 seconds.
-        h1.cmd(f'iperf3 -c {h7.IP()} -p 5000 -b 10M -P 10 -t 150 -C {cc_scheme} &')
+        h1.cmd(f'iperf3 -c {h7.IP()} -p 5000 -b 10M -P 10 -t 150 -C {cc_scheme}')
         h3.cmd(f'iperf3 -c {h7.IP()} -p 5000 -b 10M -P 10 -t 150 -C {cc_scheme}')
     elif option == 'c2c':
         # Direct link (S1–S4): Run clients on H1, H3, and H4 for 150 seconds.
-        h1.cmd(f'iperf3 -c {h7.IP()} -p 5000 -b 10M -P 10 -t 150 -C {cc_scheme} &')
-        h3.cmd(f'iperf3 -c {h7.IP()} -p 5000 -b 10M -P 10 -t 150 -C {cc_scheme} &')
+        h1.cmd(f'iperf3 -c {h7.IP()} -p 5000 -b 10M -P 10 -t 150 -C {cc_scheme}')
+        h3.cmd(f'iperf3 -c {h7.IP()} -p 5000 -b 10M -P 10 -t 150 -C {cc_scheme}')
         h4.cmd(f'iperf3 -c {h7.IP()} -p 5000 -b 10M -P 10 -t 150 -C {cc_scheme}')
     else:
         info('*** Invalid experiment option. Please use one of: a, b, c1, c2a, c2b, or c2c\n')
