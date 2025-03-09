@@ -15,7 +15,7 @@ fi
 
 # Start legitimate traffic at t=0s in background
 echo "t=0s: Starting legitimate traffic"
-./legitimate > legitimate.log 2>&1 &
+./legitimate&
 LEGIT_PID=$!
 
 # Wait 20 seconds
@@ -23,7 +23,7 @@ sleep 20
 
 # Start SYN flood at t=20s in background
 echo "t=20s: Starting SYN flood attack"
-sudo ./syn_flood > syn_flood.log 2>&1 &
+sudo ./syn_flood &
 FLOOD_PID=$!
 
 # Wait 80 seconds (until t=100s)
