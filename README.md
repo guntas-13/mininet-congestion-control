@@ -2,6 +2,10 @@
 
 ## Task-1: Comparison of congestion control protocols
 
+<div align = "center">
+    <img src = "./images/topo.png" style="width: 100%">
+</div>
+
 ### Usage
 
 #### Traffic Generation with Congestion Control Algorithms
@@ -61,7 +65,34 @@ python3 analysis.py
 
 This script parses the PCAP file, computes metrics (throughput, goodput, packet loss rate, maximum window size), and generates corresponding graphs.
 
+## TCP Cubic
+
+<div align = "center">
+    <img src = "./images/IO_b_cubic.png" style="width: 100%">
+</div>
+
+## TCP Westwood
+
+<div align = "center">
+    <img src = "./images/IO_b_westwood.png" style="width: 100%">
+</div>
+
+## TCP Scalable
+
+<div align = "center">
+    <img src = "./images/IO_b_scalable.png" style="width: 100%">
+</div>
+
 ## Task-2 : Implementation and mitigation of SYN flood attack
+
+<div align = "center">
+    <img src = "./images/setup.png" style="width: 100%">
+</div>
+
+<div align = "center">
+    <img src = "./images/ifconfig.png" style="width: 100%">
+</div>
+
 
 We used two VMs for peforming this task. On one VM we ran the `server` and on the other VM we ran our script for `legitimate traffic` and the `syn flood attack`.
 
@@ -98,6 +129,10 @@ chmod +x run_attack.sh
 sudo ./run_attack.sh
 ```
 
+<div align = "center">
+    <img src = "./images/connection_durations.png" style="width: 100%">
+</div>
+
 ### SYN Flood Attack Mitigation
 
 Set the usage of cookies for TCP to `1` for mitigating the syn flood attack as the server will only allocate memory for the clients which `ACK` the `SYN-ACK` from the server and won't open a half connection.
@@ -107,6 +142,14 @@ sudo sysctl -w net.ipv4.tcp_syncookies=1
 ```
 
 Again run the process same as above.
+
+<div align = "center">
+    <img src = "./images/still.png" style="width: 100%">
+</div>
+
+<div align = "center">
+    <img src = "./images/connection_durations1.png" style="width: 100%">
+</div>
 
 ## Task-3 : TCP Behaviour under Nagle's Algorithm and DelayedACK
 
