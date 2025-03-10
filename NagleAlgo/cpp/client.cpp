@@ -1,5 +1,7 @@
 // client.cpp
 #include <iostream>
+#include <thread>
+#include <chrono>
 #include <fstream>
 #include <sys/socket.h>
 #include <arpa/inet.h>
@@ -89,7 +91,7 @@ void transmit_file(bool nagle_enabled, bool delayed_ack_enabled) {
         }
         total_sent += sent;
         cout << "Sent " << sent << " bytes, total " << total_sent << " at " << time(nullptr) << endl;
-        sleep(1); // 40 bytes/sec
+        this_thread::sleep_for(chrono::microseconds(500)); // 40bytes per 0.5 ms
     }
 
     file.close();
