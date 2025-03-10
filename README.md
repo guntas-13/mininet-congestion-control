@@ -42,7 +42,7 @@ For Part (d):
 sudo python3 congestion_ctrl.py c1/c2a/c2b/c2c <cong_algo> <loss>
 ```
 
-*Note:* Follow on-screen prompts (eg. to open wireshark for capturing) when running the experiments.
+_Note:_ Follow on-screen prompts (eg. to open wireshark for capturing) when running the experiments.
 
 #### Analysis
 
@@ -92,7 +92,6 @@ This script parses the PCAP file, computes metrics (throughput, goodput, packet 
 <div align = "center">
     <img src = "./images/ifconfig.png" style="width: 100%">
 </div>
-
 
 We used two VMs for peforming this task. On one VM we ran the `server` and on the other VM we ran our script for `legitimate traffic` and the `syn flood attack`.
 
@@ -172,3 +171,33 @@ g++ -std=c++17 server.cpp -o server
 g++ -std=c++17 client.cpp -o client
 ./client <nagle_enabled: 0/1> <delayed_ack_enabled: 0/1>
 ```
+
+## Nagle's Algorithm On, Delayed ACK On
+
+<div align = "center">
+    <img src = "./images/ND11.png" style="width: 100%">
+</div>
+
+## Nagle's Algorithm On, Delayed ACK Off
+
+<div align = "center">
+    <img src = "./images/ND10.png" style="width: 100%">
+</div>
+
+## Nagle's Algorithm Off, Delayed ACK On
+
+<div align = "center">
+    <img src = "./images/ND01.png" style="width: 100%">
+</div>
+
+## Nagle's Algorithm Off, Delayed ACK Off
+
+<div align = "center">
+    <img src = "./images/ND00.png" style="width: 100%">
+</div>
+
+## Final Comparion
+
+<div align = "center">
+    <img src = "./images/ss.png" style="width: 100%">
+</div>
