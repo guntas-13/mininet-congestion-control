@@ -27,7 +27,7 @@ int main() {
         return 1;
     }
 
-    if (listen(server_socket, 100) < 0) {
+    if (listen(server_socket, 256) < 0) {
         cerr << "Listen failed" << endl;
         close(server_socket);
         return 1;
